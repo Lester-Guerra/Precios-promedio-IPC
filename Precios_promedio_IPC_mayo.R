@@ -204,6 +204,9 @@ bol_abr_sin_out <- bol_abr %>%
     dep_may %>% select(codigo_articulo, Departamento, pgeo),
     by = c("codigo_articulo", "Departamento")
     ) %>%
+  # Si no hay precio el mes siguiente copiamos el precio base para no eliminar
+  # esas boletas
+  mutate(pgeo = coalesce(pgeo, precio_base)) %>%
   filter(precio_base <= pgeo * 1.25) %>%
   filter(precio_base >= pgeo / 1.25)
 
@@ -232,12 +235,13 @@ dep_abr <- base_abr %>%
 # Vamos a incluir los precios de mayo retroactivamente en los precios de abril.
 
 dep_abr_adj <- dep_abr %>%
-  select(codigo_articulo, Departamento, n, pgeo) %>%
+  select(codigo_articulo, region, Departamento, n, pgeo) %>%
   full_join(dep_may %>% select(-n) %>% rename_at('pgeo', ~'pgeo_may'),
-             by = c("codigo_articulo", "Departamento")
+             by = c("codigo_articulo", "region", "Departamento")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_may))
 
+dep_abr_adj$anio <- anio
 dep_abr_adj$mes <- mes
 dep_abr_adj$pgeo_may <- NULL
 
@@ -265,6 +269,7 @@ reg_abr_adj <- reg_abr %>%
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_may))
 
+reg_abr_adj$anio <- anio
 reg_abr_adj$mes <- mes
 reg_abr_adj$pgeo_may <- NULL
 
@@ -291,6 +296,7 @@ var_abr_adj <- var_abr %>%
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_may))
 
+var_abr_adj$anio <- anio
 var_abr_adj$mes <- mes
 var_abr_adj$pgeo_may <- NULL
 
@@ -314,6 +320,7 @@ prod_abr_adj <- prod_abr %>%
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_may))
 
+prod_abr_adj$anio <- anio
 prod_abr_adj$mes <- mes
 prod_abr_adj$pgeo_may <- NULL
 
@@ -345,6 +352,7 @@ bol_mar_sin_out <- bol_mar %>%
     dep_abr %>% select(codigo_articulo, Departamento, pgeo),
     by = c("codigo_articulo", "Departamento")
     ) %>%
+  mutate(pgeo = coalesce(pgeo, precio_base)) %>%
   filter(precio_base <= pgeo * 1.25) %>%
   filter(precio_base >= pgeo / 1.25)
 
@@ -369,12 +377,13 @@ dep_mar <- base_mar %>%
   mutate(cod_prod = ifelse(cod_prod == "10400011", "1040001", cod_prod))
 
 dep_mar_adj <- dep_mar %>%
-  select(codigo_articulo, Departamento, n, pgeo) %>%
-  full_join(dep_abr %>% select(-n) %>% rename_at('pgeo', ~'pgeo_abr'),
-             by = c("codigo_articulo", "Departamento")
+  select(codigo_articulo, region, Departamento, n, pgeo) %>%
+  full_join(dep_abr_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_abr'),
+             by = c("codigo_articulo", "region", "Departamento")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_abr))
 
+dep_mar_adj$anio <- anio
 dep_mar_adj$mes <- mes
 dep_mar_adj$pgeo_abr <- NULL
 
@@ -394,11 +403,12 @@ reg_mar <- dep_mar %>%
 
 reg_mar_adj <- reg_mar %>%
   select(codigo_articulo, region, n, pgeo) %>%
-  full_join(reg_abr %>% select(-n) %>% rename_at('pgeo', ~'pgeo_abr'),
+  full_join(reg_abr_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_abr'),
              by = c("codigo_articulo", "region")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_abr))
 
+reg_mar_adj$anio <- anio
 reg_mar_adj$mes <- mes
 reg_mar_adj$pgeo_abr <- NULL
 
@@ -418,11 +428,12 @@ var_mar <- reg_mar %>%
 
 var_mar_adj <- var_mar %>%
   select(codigo_articulo, n, pgeo) %>%
-  full_join(var_abr %>% select(-n) %>% rename_at('pgeo', ~'pgeo_abr'),
+  full_join(var_abr_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_abr'),
              by = c("codigo_articulo")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_abr))
 
+var_mar_adj$anio <- anio
 var_mar_adj$mes <- mes
 var_mar_adj$pgeo_abr <- NULL
 
@@ -439,11 +450,12 @@ prod_mar <- var_mar %>%
 
 prod_mar_adj <- prod_mar %>%
   select(cod_prod, n, pgeo) %>%
-  full_join(prod_abr %>% select(-n) %>% rename_at('pgeo', ~'pgeo_abr'),
+  full_join(prod_abr_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_abr'),
              by = c("cod_prod")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_abr))
 
+prod_mar_adj$anio <- anio
 prod_mar_adj$mes <- mes
 prod_mar_adj$pgeo_abr <- NULL
 
@@ -473,6 +485,7 @@ bol_feb_sin_out <- bol_feb %>%
     dep_mar %>% select(codigo_articulo, Departamento, pgeo),
     by = c("codigo_articulo", "Departamento")
     ) %>%
+  mutate(pgeo = coalesce(pgeo, precio_base)) %>%
   filter(precio_base <= pgeo * 1.25) %>%
   filter(precio_base >= pgeo / 1.25)
 
@@ -497,12 +510,13 @@ dep_feb <- base_feb %>%
   mutate(cod_prod = ifelse(cod_prod == "10400011", "1040001", cod_prod))
 
 dep_feb_adj <- dep_feb %>%
-  select(codigo_articulo, Departamento, n, pgeo) %>%
-  full_join(dep_mar %>% select(-n) %>% rename_at('pgeo', ~'pgeo_mar'),
-             by = c("codigo_articulo", "Departamento")
+  select(codigo_articulo, region, Departamento, n, pgeo) %>%
+  full_join(dep_mar_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_mar'),
+             by = c("codigo_articulo", "region", "Departamento")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_mar))
 
+dep_feb_adj$anio <- anio
 dep_feb_adj$mes <- mes
 dep_feb_adj$pgeo_mar <- NULL
 
@@ -522,11 +536,12 @@ reg_feb <- dep_feb %>%
 
 reg_feb_adj <- reg_feb %>%
   select(codigo_articulo, region, n, pgeo) %>%
-  full_join(reg_mar %>% select(-n) %>% rename_at('pgeo', ~'pgeo_mar'),
+  full_join(reg_mar_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_mar'),
              by = c("codigo_articulo", "region")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_mar))
 
+reg_feb_adj$anio <- anio
 reg_feb_adj$mes <- mes
 reg_feb_adj$pgeo_mar <- NULL
 
@@ -546,11 +561,12 @@ var_feb <- reg_feb %>%
 
 var_feb_adj <- var_feb %>%
   select(codigo_articulo, n, pgeo) %>%
-  full_join(var_mar %>% select(-n) %>% rename_at('pgeo', ~'pgeo_mar'),
+  full_join(var_mar_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_mar'),
              by = c("codigo_articulo")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_mar))
 
+var_feb_adj$anio <- anio
 var_feb_adj$mes <- mes
 var_feb_adj$pgeo_mar <- NULL
 
@@ -567,11 +583,12 @@ prod_feb <- var_feb %>%
 
 prod_feb_adj <- prod_feb %>%
   select(cod_prod, n, pgeo) %>%
-  full_join(prod_mar %>% select(-n) %>% rename_at('pgeo', ~'pgeo_mar'),
+  full_join(prod_mar_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_mar'),
              by = c("cod_prod")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_mar))
 
+prod_feb_adj$anio <- anio
 prod_feb_adj$mes <- mes
 prod_feb_adj$pgeo_mar <- NULL
 
@@ -585,6 +602,9 @@ bol_ene <- dbGetQuery(
     mes
   )
 )
+
+# Enero y diciembre aun muestran variedades de la base 2010 en el sistema
+bol_ene <- bol_ene %>% filter(tipo_precio == "IPC-2023")
 
 bol_ene$precio_base <- with(
   bol_ene,
@@ -601,6 +621,7 @@ bol_ene_sin_out <- bol_ene %>%
     dep_feb %>% select(codigo_articulo, Departamento, pgeo),
     by = c("codigo_articulo", "Departamento")
     ) %>%
+  mutate(pgeo = coalesce(pgeo, precio_base)) %>%
   filter(precio_base <= pgeo * 1.25) %>%
   filter(precio_base >= pgeo / 1.25)
 
@@ -625,12 +646,13 @@ dep_ene <- base_ene %>%
   mutate(cod_prod = ifelse(cod_prod == "10400011", "1040001", cod_prod))
 
 dep_ene_adj <- dep_ene %>%
-  select(codigo_articulo, Departamento, n, pgeo) %>%
-  full_join(dep_feb %>% select(-n) %>% rename_at('pgeo', ~'pgeo_feb'),
-             by = c("codigo_articulo", "Departamento")
+  select(codigo_articulo, region, Departamento, n, pgeo) %>%
+  full_join(dep_feb_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_feb'),
+             by = c("codigo_articulo", "region", "Departamento")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_feb))
 
+dep_ene_adj$anio <- anio
 dep_ene_adj$mes <- mes
 dep_ene_adj$pgeo_feb <- NULL
 
@@ -650,11 +672,12 @@ reg_ene <- dep_ene %>%
 
 reg_ene_adj <- reg_ene %>%
   select(codigo_articulo, region, n, pgeo) %>%
-  full_join(reg_feb %>% select(-n) %>% rename_at('pgeo', ~'pgeo_feb'),
+  full_join(reg_feb_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_feb'),
              by = c("codigo_articulo", "region")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_feb))
 
+reg_ene_adj$anio <- anio
 reg_ene_adj$mes <- mes
 reg_ene_adj$pgeo_feb <- NULL
 
@@ -674,11 +697,12 @@ var_ene <- reg_ene %>%
 
 var_ene_adj <- var_ene %>%
   select(codigo_articulo, n, pgeo) %>%
-  full_join(var_feb %>% select(-n) %>% rename_at('pgeo', ~'pgeo_feb'),
+  full_join(var_feb_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_feb'),
              by = c("codigo_articulo")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_feb))
 
+var_ene_adj$anio <- anio
 var_ene_adj$mes <- mes
 var_ene_adj$pgeo_feb <- NULL
 
@@ -695,11 +719,12 @@ prod_ene <- var_ene %>%
 
 prod_ene_adj <- prod_ene %>%
   select(cod_prod, n, pgeo) %>%
-  full_join(prod_feb %>% select(-n) %>% rename_at('pgeo', ~'pgeo_feb'),
+  full_join(prod_feb_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_feb'),
              by = c("cod_prod")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_feb))
 
+prod_ene_adj$anio <- anio
 prod_ene_adj$mes <- mes
 prod_ene_adj$pgeo_feb <- NULL
 
@@ -714,6 +739,8 @@ bol_dic <- dbGetQuery(
     mes
   )
 )
+
+bol_dic <- bol_dic %>% filter(tipo_precio == "IPC-2023")
 
 bol_dic$precio_base <- with(
   bol_dic,
@@ -730,6 +757,7 @@ bol_dic_sin_out <- bol_dic %>%
     dep_ene %>% select(codigo_articulo, Departamento, pgeo),
     by = c("codigo_articulo", "Departamento")
     ) %>%
+  mutate(pgeo = coalesce(pgeo, precio_base)) %>%
   filter(precio_base <= pgeo * 1.25) %>%
   filter(precio_base >= pgeo / 1.25)
 
@@ -754,9 +782,9 @@ dep_dic <- base_dic %>%
   mutate(cod_prod = ifelse(cod_prod == "10400011", "1040001", cod_prod))
 
 dep_dic_adj <- dep_dic %>%
-  select(codigo_articulo, Departamento, n, pgeo) %>%
-  full_join(dep_ene %>% select(-n) %>% rename_at('pgeo', ~'pgeo_ene'),
-             by = c("codigo_articulo", "Departamento")
+  select(codigo_articulo, region, Departamento, n, pgeo) %>%
+  full_join(dep_ene_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_ene'),
+             by = c("codigo_articulo", "region", "Departamento")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_ene))
 
@@ -780,7 +808,7 @@ reg_dic <- dep_dic %>%
 
 reg_dic_adj <- reg_dic %>%
   select(codigo_articulo, region, n, pgeo) %>%
-  full_join(reg_ene %>% select(-n) %>% rename_at('pgeo', ~'pgeo_ene'),
+  full_join(reg_ene_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_ene'),
              by = c("codigo_articulo", "region")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_ene))
@@ -805,7 +833,7 @@ var_dic <- reg_dic %>%
 
 var_dic_adj <- var_dic %>%
   select(codigo_articulo, n, pgeo) %>%
-  full_join(var_ene %>% select(-n) %>% rename_at('pgeo', ~'pgeo_ene'),
+  full_join(var_ene_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_ene'),
              by = c("codigo_articulo")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_ene))
@@ -827,7 +855,7 @@ prod_dic <- var_dic %>%
 
 prod_dic_adj <- prod_dic %>%
   select(cod_prod, n, pgeo) %>%
-  full_join(prod_ene %>% select(-n) %>% rename_at('pgeo', ~'pgeo_ene'),
+  full_join(prod_ene_adj %>% select(-n) %>% rename_at('pgeo', ~'pgeo_ene'),
              by = c("cod_prod")
   ) %>%
   mutate(pgeo = coalesce(pgeo, pgeo_ene))
@@ -835,6 +863,259 @@ prod_dic_adj <- prod_dic %>%
 prod_dic_adj$anio <- anio
 prod_dic_adj$mes <- mes
 prod_dic_adj$pgeo_ene <- NULL
+
+# Ahora imputamos los precios promedio al mes siguiente, empezando en enero
+
+dep_feb_imp <- dep_ene_adj %>%
+  select(codigo_articulo, region, Departamento, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_ene') %>%
+  full_join(
+    dep_feb_adj,
+    by = c("codigo_articulo", "region", "Departamento")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_ene))
+
+dep_feb_imp$mes <- 2
+dep_feb_imp$anio <- 2024
+dep_feb_imp$pgeo_ene <- NULL
+
+dep_mar_imp <- dep_feb_imp %>%
+  select(codigo_articulo, region, Departamento, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_feb') %>%
+  full_join(
+    dep_mar_adj,
+    by = c("codigo_articulo", "region", "Departamento")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_feb))
+
+dep_mar_imp$mes <- 3
+dep_mar_imp$anio <- 2024
+dep_mar_imp$pgeo_feb <- NULL
+
+dep_abr_imp <- dep_mar_imp %>%
+  select(codigo_articulo, region, Departamento, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_mar') %>%
+  full_join(
+    dep_abr_adj,
+    by = c("codigo_articulo", "region", "Departamento")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_mar))
+
+dep_abr_imp$mes <- 4
+dep_abr_imp$anio <- 2024
+dep_abr_imp$pgeo_mar <- NULL
+
+dep_may_imp <- dep_abr_imp %>%
+  select(codigo_articulo, region, Departamento, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_abr') %>%
+  full_join(
+    dep_may,
+    by = c("codigo_articulo", "region", "Departamento")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_abr))
+
+dep_may_imp$mes <- 5
+dep_may_imp$anio <- 2024
+dep_may_imp$pgeo_abr <- NULL
+
+reg_feb_imp <- reg_ene_adj %>%
+  select(codigo_articulo, region, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_ene') %>%
+  full_join(
+    reg_feb_adj,
+    by = c("codigo_articulo", "region")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_ene))
+
+reg_feb_imp$mes <- 2
+reg_feb_imp$anio <- 2024
+reg_feb_imp$pgeo_ene <- NULL
+
+reg_mar_imp <- reg_feb_imp %>%
+  select(codigo_articulo, region, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_feb') %>%
+  full_join(
+    reg_mar_adj,
+    by = c("codigo_articulo", "region")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_feb))
+
+reg_mar_imp$mes <- 3
+reg_mar_imp$anio <- 2024
+reg_mar_imp$pgeo_feb <- NULL
+
+reg_abr_imp <- reg_mar_imp %>%
+  select(codigo_articulo, region, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_mar') %>%
+  full_join(
+    reg_abr_adj,
+    by = c("codigo_articulo", "region")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_mar))
+
+reg_abr_imp$mes <- 4
+reg_abr_imp$anio <- 2024
+reg_abr_imp$pgeo_mar <- NULL
+
+reg_may_imp <- reg_abr_imp %>%
+  select(codigo_articulo, region, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_abr') %>%
+  full_join(
+    reg_may,
+    by = c("codigo_articulo", "region")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_abr))
+
+reg_may_imp$mes <- 5
+reg_may_imp$anio <- 2024
+reg_may_imp$pgeo_abr <- NULL
+
+var_feb_imp <- var_ene_adj %>%
+  select(codigo_articulo, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_ene') %>%
+  full_join(
+    var_feb_adj,
+    by = c("codigo_articulo")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_ene))
+
+var_feb_imp$mes <- 2
+var_feb_imp$anio <- 2024
+var_feb_imp$pgeo_ene <- NULL
+
+var_mar_imp <- var_feb_imp %>%
+  select(codigo_articulo, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_feb') %>%
+  full_join(
+    var_mar_adj,
+    by = c("codigo_articulo")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_feb))
+
+var_mar_imp$mes <- 3
+var_mar_imp$anio <- 2024
+var_mar_imp$pgeo_feb <- NULL
+
+var_abr_imp <- var_mar_imp %>%
+  select(codigo_articulo, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_mar') %>%
+  full_join(
+    var_abr_adj,
+    by = c("codigo_articulo")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_mar))
+
+var_abr_imp$mes <- 4
+var_abr_imp$anio <- 2024
+var_abr_imp$pgeo_mar <- NULL
+
+var_may_imp <- var_abr_imp %>%
+  select(codigo_articulo, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_abr') %>%
+  full_join(
+    var_may,
+    by = c("codigo_articulo")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_abr))
+
+var_may_imp$mes <- 5
+var_may_imp$anio <- 2024
+var_may_imp$pgeo_abr <- NULL
+
+prod_feb_imp <- prod_ene_adj %>%
+  select(cod_prod, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_ene') %>%
+  full_join(
+    prod_feb_adj,
+    by = c("cod_prod")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_ene))
+
+prod_feb_imp$mes <- 2
+prod_feb_imp$anio <- 2024
+prod_feb_imp$pgeo_ene <- NULL
+
+prod_mar_imp <- prod_feb_imp %>%
+  select(cod_prod, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_feb') %>%
+  full_join(
+    prod_mar_adj,
+    by = c("cod_prod")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_feb))
+
+prod_mar_imp$mes <- 3
+prod_mar_imp$anio <- 2024
+prod_mar_imp$pgeo_feb <- NULL
+
+prod_abr_imp <- prod_mar_imp %>%
+  select(cod_prod, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_mar') %>%
+  full_join(
+    prod_abr_adj,
+    by = c("cod_prod")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_mar))
+
+prod_abr_imp$mes <- 4
+prod_abr_imp$anio <- 2024
+prod_abr_imp$pgeo_mar <- NULL
+
+prod_may_imp <- prod_abr_imp %>%
+  select(cod_prod, pgeo) %>%
+  rename_at('pgeo', ~'pgeo_abr') %>%
+  full_join(
+    prod_may,
+    by = c("cod_prod")
+  ) %>%
+  mutate(pgeo = coalesce(pgeo, pgeo_abr))
+
+prod_may_imp$mes <- 5
+prod_may_imp$anio <- 2024
+prod_may_imp$pgeo_abr <- NULL
+
+# Concatenamos los resultados según cada grupo
+
+PP_dep <- rbind(
+  dep_may_imp, dep_abr_imp, dep_mar_imp, dep_feb_imp, dep_ene_adj, dep_dic_adj
+)
+PP_reg <- rbind(
+  reg_may_imp, reg_abr_imp, reg_mar_imp, reg_feb_imp, reg_ene_adj, reg_dic_adj
+)
+PP_var <- rbind(
+  var_may_imp, var_abr_imp, var_mar_imp, var_feb_imp, var_ene_adj, var_dic_adj
+)
+PP_prod <- rbind(
+  prod_may_imp, prod_abr_imp, prod_mar_imp, prod_feb_imp, prod_ene_adj,
+  prod_dic_adj
+)
+
+# Algunas celdas quedaron vacías. Como todas son determinadas por el código del
+# artículo, podemos crear un df con la información
+
+inf_articulos <- PP_dep %>%
+  select(codigo_articulo, articulo, cant_base, cod_prod, producto_nombre) %>%
+  drop_na() %>% distinct()
+
+# Y luego añadirlas
+
+PP_dep_fill <- PP_dep %>%
+  select(codigo_articulo, region, Departamento, pgeo, mes, anio) %>%
+  left_join(inf_articulos, by = c("codigo_articulo"))
+
+PP_reg_fill <- PP_reg %>%
+  select(codigo_articulo, region, pgeo, mes, anio) %>%
+  left_join(inf_articulos, by = c("codigo_articulo"))
+
+PP_var_fill <- PP_var %>%
+  select(codigo_articulo, pgeo, mes, anio) %>%
+  left_join(inf_articulos, by = c("codigo_articulo"))
+
+PP_prod_fill <- PP_prod %>%
+  select(cod_prod, pgeo, mes, anio) %>%
+  left_join(inf_articulos %>% select(cod_prod, producto_nombre) %>% distinct(),
+            by = c("cod_prod")
+  )
 
 # Guardamos los resultados
 wb <- createWorkbook()
@@ -844,30 +1125,9 @@ addWorksheet(wb, "Precios_promedio_reg")
 addWorksheet(wb, "Precios_promedio_var")
 addWorksheet(wb, "Precios_promedio_prod")
 
-writeData(
-  wb, "Precios_promedio_dep",
-  rbind(
-    dep_may, dep_abr_adj, dep_mar_adj, dep_feb_adj, dep_ene_adj, dep_dic_adj
-  )
-)
-writeData(
-  wb, "Precios_promedio_reg",
-  rbind(
-    reg_may, reg_abr_adj, reg_mar_adj, reg_feb_adj, reg_ene_adj, reg_dic_adj
-  )
-)
-writeData(
-  wb, "Precios_promedio_var",
-  rbind(
-    var_may, var_abr_adj, var_mar_adj, var_feb_adj, var_ene_adj, var_dic_adj
-  )
-)
-writeData(
-  wb, "Precios_promedio_prod",
-  rbind(
-    prod_may, prod_abr_adj, prod_mar_adj, prod_feb_adj, prod_ene_adj,
-    prod_dic_adj
-  )
-)
+writeData(wb, "Precios_promedio_dep", PP_dep_fill)
+writeData(wb, "Precios_promedio_reg", PP_reg_fill)
+writeData(wb, "Precios_promedio_var", PP_var_fill)
+writeData(wb, "Precios_promedio_prod", PP_prod_fill)
 
-saveWorkbook(wb, "Precios_promedio_IPC.xlsx", overwrite = TRUE)
+saveWorkbook(wb, "Precios_promedio_IPC_mayo.xlsx", overwrite = TRUE)
