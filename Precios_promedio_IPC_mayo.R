@@ -740,6 +740,9 @@ bol_dic <- dbGetQuery(
   )
 )
 
+# Esta fue el último mes que descargar. Ahora podemos cerrar la conexión.
+dbDisconnect(con)
+
 bol_dic <- bol_dic %>% filter(tipo_precio == "IPC-2023")
 
 bol_dic$precio_base <- with(
@@ -1116,6 +1119,12 @@ PP_prod_fill <- PP_prod %>%
   left_join(inf_articulos %>% select(cod_prod, producto_nombre) %>% distinct(),
             by = c("cod_prod")
   )
+
+# La región cambió de tipo a caracter (DAMH). La volvemos un entero.
+PP_dep_fill$region <- as.integer(PP_dep_fill$region)
+PP_reg_fill$region <- as.integer(PP_reg_fill$region)
+PP_var_fill$region <- as.integer(PP_var_fill$region)
+PP_fill_fill$region <- as.integer(PP_fill_fill$region)
 
 # Guardamos los resultados
 wb <- createWorkbook()
